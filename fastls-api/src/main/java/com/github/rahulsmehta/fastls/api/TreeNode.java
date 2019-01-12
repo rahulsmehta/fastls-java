@@ -1,27 +1,28 @@
 package com.github.rahulsmehta.fastls.api;
 
+import com.google.common.collect.Sets;
+
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 public class TreeNode {
 
     private int value;
     private TreeNode parent;
-    private Set<TreeNode> children;
+    private HashSet<TreeNode> children;
 
 
     public TreeNode(int value, TreeNode parent) {
         this.value = value;
         this.parent = parent;
-        this.children = new HashSet<>();
+        this.children = Sets.newHashSet();
     }
 
     public TreeNode(int value, TreeNode parent, Set<TreeNode> children) {
         this.value = value;
         this.parent = parent;
-        this.children = children;
+        this.children = Sets.newHashSet(children);
     }
 
     public int getValue() {
@@ -45,7 +46,7 @@ public class TreeNode {
     }
 
     public void setChildren(Set<TreeNode> children) {
-        this.children = children;
+        this.children = Sets.newHashSet(children);
     }
 
     public void addChild(TreeNode child) {

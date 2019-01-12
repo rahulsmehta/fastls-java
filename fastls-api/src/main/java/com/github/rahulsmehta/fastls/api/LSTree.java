@@ -3,11 +3,15 @@ package com.github.rahulsmehta.fastls.api;
 import com.google.common.collect.*;
 import org.jgrapht.alg.util.UnionFind;
 import org.jheaps.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class LSTree {
+
+    private final Logger LOG = LoggerFactory.getLogger(LSTree.class);
 
     private UnionFind<Integer> uf;
     private TreeNode root;
@@ -129,8 +133,14 @@ public class LSTree {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
 
+        this.printNodeMap();
+
         List<TreeNode> cycle = findCycle(u_node, v_node);
+        List<Integer> values = cycle.stream().map(TreeNode::getValue).collect(Collectors.toList());
+        LOG.warn("found cycle: {}", values);
         if (cycle.size() < 2) {
+            LOG.warn("current edge: {}", e);
+            LOG.warn("cycle: {}, {}", cycle.get(0).getValue(), cycle.get(0).getParent().getValue());
             throw new IllegalStateException("Should have at least 2 vertices");
         }
 
@@ -148,13 +158,21 @@ public class LSTree {
             uf.union(pivot.getValue(), toContract.getValue());
         }
         newChildren = Sets.difference(newChildren, ImmutableSet.of(cycle));
-        newChildren.forEach(child -> child.setParent(pivot));
+        newChildren.stream().filter(node -> node != pivot).forEach(child -> child.setParent(pivot));
+        LOG.warn("pivot : {}", pivot.getValue());
+        LOG.warn("pivot parent: {}", pivot.getParent().getValue());
         pivot.setChildren(newChildren);
+        if (cycle.contains(pivot.getParent())) {
+            this.root.addChild(pivot);
+            pivot.setParent(this.root);
+        }
         // Re-label the new component
         int oldValue = pivot.getValue();
         nodeMap.remove(oldValue);
 
         int newValue = uf.find(oldValue);
+        LOG.warn("relabeled to: {}", pivot.getValue());
+        LOG.warn("new pivot parent: {}", pivot.getParent().getValue());
         pivot.setValue(newValue);
         nodeMap.put(newValue, pivot);
 
@@ -215,24 +233,39 @@ public class LSTree {
         return e.i == e.j;
     }
 
+    private void printNodeMap() {
+        nodeMap.entrySet().stream()
+                .filter(entry -> entry.getKey() != -1)
+                .forEach(e -> LOG.warn("{} -p-> {}", e.getKey(), e.getValue().getParent().getValue()));
+    }
+
 
     public Optional<Edge> processEdge(Edge graphEdge) {
         Edge treeEdge = translateEdge(graphEdge);
+        Object[] args = { graphEdge.i, graphEdge.j, treeEdge.i, treeEdge.j };
+        LOG.warn("{},{} -> {},{}", args);
 
-        if (isInit(treeEdge)) {
+        if (isInit(treeEdge) && !isSelfLoop(treeEdge)) {
+            LOG.warn("Initial case");
             processInit(treeEdge);
-            if (isBackward(treeEdge)) {
+            LOG.warn("{}", nodeMap.get(treeEdge.j).getParent().getValue());
+            if (isBackward(treeEdge) && !isSelfLoop(treeEdge)) {
+                LOG.warn("Backward");
                 return processBackward(treeEdge);
             } else {
                 return Optional.empty();
             }
         } else if (isSelfLoop(treeEdge) || isForward(treeEdge)) {
+            LOG.warn("Self-loop or forward");
             return Optional.empty();
         } else if (isBackward(treeEdge)) {
+            LOG.warn("Backward");
             return processBackward(treeEdge);
         } else if (isCrossForward(treeEdge)) {
+            LOG.warn("Cross-forward");
             return Optional.of(treeEdge);
         } else if (isCrossNonForward(treeEdge)) {
+            LOG.warn("Cross-non-forward");
             return processCrossNonForward(treeEdge);
         } else {
             throw new IllegalStateException("Should never reach here");

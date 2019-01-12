@@ -27,18 +27,20 @@ public class LookSelectImpl {
     private boolean streamingPhase() {
         LOG.warn("Starting phase {}", currentPhase);
         this.tree.startPhase();
-        ArrayList<Edge> edges = new ArrayList<>();
+        ArrayList<Edge> newEdges = new ArrayList<>();
         int nextStreamSize = 0;
 
         for (Edge edge : this.currentStream) {
             Optional<Edge> maybeEdge = this.tree.processEdge(edge);
             if (maybeEdge.isPresent()) {
-                edges.add(edge);
+                newEdges.add(edge);
                 nextStreamSize++;
             }
         }
 
-        this.currentStream = new EdgeStream(edges);
+        LOG.warn("Edges in next phase: {}", newEdges);
+
+        this.currentStream = new EdgeStream(newEdges);
         this.currentPhase++;
         return nextStreamSize == 0 || this.tree.isComplete();
     }
