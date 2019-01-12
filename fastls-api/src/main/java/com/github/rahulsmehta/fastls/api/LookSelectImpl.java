@@ -29,8 +29,10 @@ public class LookSelectImpl {
         this.tree.startPhase();
         ArrayList<Edge> newEdges = new ArrayList<>();
         int nextStreamSize = 0;
+        int currentStreamSize = 0;
 
         for (Edge edge : this.currentStream) {
+            currentStreamSize++;
             Optional<Edge> maybeEdge = this.tree.processEdge(edge);
             if (maybeEdge.isPresent()) {
                 newEdges.add(edge);
@@ -38,7 +40,12 @@ public class LookSelectImpl {
             }
         }
 
-        LOG.warn("Edges in next phase: {}", newEdges);
+        LOG.warn("{} edges in current phase", currentStreamSize);
+
+//        LOG.warn("{} edges in next phase", newEdges.size());
+//        if (newEdges.size() < 10) {
+//            LOG.warn("edges: {}", newEdges);
+//        }
 
         this.currentStream = new EdgeStream(newEdges);
         this.currentPhase++;

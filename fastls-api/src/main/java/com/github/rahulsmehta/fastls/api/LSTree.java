@@ -13,12 +13,16 @@ public class LSTree {
 
     private final Logger LOG = LoggerFactory.getLogger(LSTree.class);
 
+
+    private final Integer numNodes;
+
     private UnionFind<Integer> uf;
     private TreeNode root;
     private Map<Integer, TreeNode> nodeMap;
     private boolean modifiedThisPhase;
 
     public LSTree(Set<Integer> nodes) {
+        this.numNodes = nodes.size();
         this.uf = new UnionFind<>(nodes);
         this.nodeMap = Maps.newHashMap();
 
@@ -133,14 +137,13 @@ public class LSTree {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
 
-//        this.printNodeMap();
 
         List<TreeNode> cycle = findCycle(u_node, v_node);
         List<Integer> values = cycle.stream().map(TreeNode::getValue).collect(Collectors.toList());
         LOG.warn("contracting cycle: {}", values);
         if (cycle.size() < 2) {
-            LOG.warn("current edge: {}", e);
-            LOG.warn("cycle: {}, {}", cycle.get(0).getValue(), cycle.get(0).getParent().getValue());
+//            LOG.warn("current edge: {}", e);
+//            LOG.warn("cycle: {}, {}", cycle.get(0).getValue(), cycle.get(0).getParent().getValue());
             throw new IllegalStateException("Should have at least 2 vertices");
         }
 
@@ -177,6 +180,7 @@ public class LSTree {
         nodeMap.put(newValue, pivot);
 
         this.modifiedThisPhase = true;
+        LOG.warn("Tree Edges (after): {}", this.treeEdges());
         return Optional.empty();
     }
 
@@ -196,14 +200,14 @@ public class LSTree {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
         return !isForward(e) && !isBackward(e) &&
-                depth(u_node) < depth(v_node);
+                depth(u_node) - 1 <= depth(v_node);
     }
 
     private boolean isCrossNonForward(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
         return !isForward(e) && !isBackward(e) &&
-                depth(u_node) >= depth(v_node);
+                depth(u_node) > depth(v_node) - 1;
     }
 
     private Optional<Edge> processCrossNonForward(Edge e) {
@@ -239,36 +243,87 @@ public class LSTree {
                 .forEach(e -> LOG.warn("{} -p-> {}", e.getKey(), e.getValue().getParent().getValue()));
     }
 
+    public List<String> treeEdges() {
+        Set<TreeNode> leafNodes = this.nodeMap.values().stream()
+                .filter(node -> node.getChildren().size() == 0)
+                .collect(Collectors.toSet());
+        Map<Integer, List<String>> leafEdges = Maps.newHashMap();
+        for (TreeNode node : leafNodes) {
+            List<String> nodePath = treeEdges(node, Lists.newLinkedList());
+            leafEdges.put(node.getValue(), nodePath);
+        }
+
+       return leafEdges.values().stream()
+                .flatMap(path -> path.stream())
+                .distinct().collect(Collectors.toList());
+
+    }
+
+    private List<String> treeEdges(TreeNode node, LinkedList<String> path) {
+        if (node.getParent() == null) {
+            return path;
+        } else {
+            path.add(String.format("(%d,%d)", node.getParent().getValue(), node.getValue()));
+            return treeEdges(node.getParent(), path);
+        }
+    }
+
+    public Integer height() {
+        Collection<TreeNode> nodes = this.nodeMap.values();
+        Integer maxHeight = -1;
+        for (TreeNode n : nodes) {
+            Integer nHeight = depth(n);
+            maxHeight = nHeight > maxHeight ? nHeight : maxHeight;
+        }
+        return maxHeight;
+    }
+
+    private Integer height(TreeNode current, Integer h) {
+        if (current.getChildren().size() == 0) {
+            return h;
+        } else {
+//            return current.getChildren().stream()
+//                    .map(child -> height(child, h + 1))
+//                    .max(Integer::compareTo)
+//                    .orElseThrow(() -> new IllegalStateException("Malformed LS tree"));
+
+            Integer maxHeight = -1;
+            for (TreeNode child : current.getChildren()) {
+                Integer subtreeHeight = height(child, h+1);
+                maxHeight = subtreeHeight > maxHeight ? subtreeHeight : maxHeight;
+            }
+            return maxHeight;
+        }
+    }
+
 
     public Optional<Edge> processEdge(Edge graphEdge) {
         Edge treeEdge = translateEdge(graphEdge);
-        Object[] args = {graphEdge.i, graphEdge.j, treeEdge.i, treeEdge.j};
-        LOG.warn("{},{} -> {},{}", args);
+//        Object[] args = {graphEdge.i, graphEdge.j, treeEdge.i, treeEdge.j};
+//        LOG.warn("{},{} -> {},{}", args);
+//        LOG.warn("(n,h_T): {},{}", this.numNodes, this.height());
 
-        Object[] args2 = { treeEdge.i, treeEdge.j, isSelfLoop(treeEdge) };
-
-        LOG.warn("{},{} is loop?: {}", args2);
         if (isInit(treeEdge) && !isSelfLoop(treeEdge)) {
-            LOG.warn("Initial case");
+//            LOG.warn("Initial case");
             processInit(treeEdge);
 //            LOG.warn("{}", nodeMap.get(treeEdge.j).getParent().getValue());
             if (isBackward(treeEdge) && !isSelfLoop(treeEdge)) {
-                LOG.warn("Backward");
+//                LOG.warn("Backward");
                 return processBackward(treeEdge);
             } else {
                 return Optional.empty();
             }
         } else if (isSelfLoop(treeEdge) || isForward(treeEdge)) {
-            LOG.warn("Self-loop or forward");
+//            LOG.warn("Self-loop or forward");
             return Optional.empty();
         } else if (isBackward(treeEdge)) {
-            LOG.warn("Backward");
+//            LOG.warn("Backward");
             return processBackward(treeEdge);
         } else if (isCrossForward(treeEdge)) {
-            LOG.warn("Cross-forward");
+//            LOG.warn("Cross-forward");
             return Optional.of(treeEdge);
         } else if (isCrossNonForward(treeEdge)) {
-            LOG.warn("Cross-non-forward");
+//            LOG.warn("Cross-non-forward");
             return processCrossNonForward(treeEdge);
         } else {
             throw new IllegalStateException("Should never reach here");

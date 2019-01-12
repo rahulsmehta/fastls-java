@@ -8,7 +8,7 @@ import java.util.Set;
 
 public class TreeNode {
 
-    private int value;
+    private Integer value;
     private TreeNode parent;
     private HashSet<TreeNode> children;
 
@@ -70,7 +70,7 @@ public class TreeNode {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TreeNode treeNode = (TreeNode) o;
-        return value == treeNode.value;
+        return value.equals(treeNode.value);
 //        return value == treeNode.value &&
 //                parent.value == treeNode.parent.value &&
 //                children.equals(treeNode.children);
