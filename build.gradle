@@ -11,11 +11,16 @@ buildscript {
 
     dependencies {
         classpath "gradle.plugin.com.palantir.gradle.gitversion:gradle-git-version:$gitVersionVersion"
+        classpath "net.ltgt.gradle:gradle-apt-plugin:0.7"
+
     }
+
 
 }
 
 apply plugin: 'java'
+apply plugin: "net.ltgt.apt"
+apply plugin: 'idea'
 //apply plugin: 'com.palantir.git-version'
 
 version '1.0-SNAPSHOT'
@@ -23,14 +28,22 @@ version '1.0-SNAPSHOT'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
+sourceSets {
+    main
+    generated
+    test
+}
+
 repositories {
     maven {
         url 'https://repo.maven.apache.org/maven2/'
     }
 }
 
+test {
+    testLogging.showStandardStreams = true
+}
 
 dependencies {
-//    classpath "gradle.plugin.com.palantir.gradle.gitversion:gradle-git-version:$gitVersionVersion"
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile "junit:junit:$junitVersion"
 }

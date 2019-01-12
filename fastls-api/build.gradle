@@ -1,6 +1,5 @@
-plugins {
-    id 'java'
-}
+apply plugin: 'java'
+apply plugin: 'idea'
 
 sourceCompatibility = "1.8"
 targetCompatibility = "1.8"
@@ -11,7 +10,17 @@ repositories {
     }
 }
 
+test {
+    testLogging.showStandardStreams = true
+}
+
 dependencies {
+
     compile "com.google.guava:guava:$guavaVersion"
     compile "org.immutables:value:$immutablesVersion"
+    compile "org.jgrapht:jgrapht-core:1.3.0"
+    compile "org.slf4j:slf4j-simple:1.6.1"
+
+    testCompile "junit:junit:$junitVersion"
+//    testCompile "org.slf4j:slf4j-simple:1.6.1"
 }
