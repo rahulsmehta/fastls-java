@@ -1,0 +1,17 @@
+plugins {
+    id 'java'
+}
+
+sourceCompatibility = "1.8"
+targetCompatibility = "1.8"
+
+repositories {
+    maven {
+        url 'https://repo.maven.apache.org/maven2/'
+    }
+}
+
+dependencies {
+    compile "com.google.guava:guava:$guavaVersion"
+    compile "org.immutables:value:$immutablesVersion"
+}

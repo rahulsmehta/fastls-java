@@ -1,0 +1,57 @@
+# Eclipse
+*.class
+.project
+.gradle
+.classpath
+.checkstyle
+.settings
+.node
+build/
+bin
+.factorypath
+.generated-config
+
+# VSCode
+.vscode
+
+# vim
+*.swp
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+# Windows git artifact
+fileeditor
+
+# Mac specific files
+.DS_Store
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+out/
+
+# Eclipse/IntelliJ APT
+generated_src/
+generated_testSrc/
+generated/
+generated-schema/
+
+docs/source/_build
+
+# Blueprint theme
+__init__.pyc
+
+# CircleCI background script output
+nohup.out
+
+# Docker generated volumes
+docker/volumes
+docker/docker-compose.yml

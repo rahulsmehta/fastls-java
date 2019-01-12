@@ -1,0 +1,4 @@
+rootProject.name = 'fastls'
+
+include 'fastls-api'
+include 'fastls-core'

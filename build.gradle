@@ -1,0 +1,36 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven {
+            url 'https://repo.maven.apache.org/maven2/'
+        }
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+
+    dependencies {
+        classpath "gradle.plugin.com.palantir.gradle.gitversion:gradle-git-version:$gitVersionVersion"
+    }
+
+}
+
+apply plugin: 'java'
+//apply plugin: 'com.palantir.git-version'
+
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    maven {
+        url 'https://repo.maven.apache.org/maven2/'
+    }
+}
+
+
+dependencies {
+//    classpath "gradle.plugin.com.palantir.gradle.gitversion:gradle-git-version:$gitVersionVersion"
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
