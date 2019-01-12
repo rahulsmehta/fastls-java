@@ -54,7 +54,7 @@ public class TestStreamingGraph {
     @Test
     public void testSmallGraph3() {
 
-        StreamingGraph fileGraph = loadGraph("test_graph_very_large.txt");
+        StreamingGraph fileGraph = loadGraph("big_2.txt");
 
         LookSelectImpl impl = fileGraph.getImpl();
         Map<Integer, Set<Integer>> keyedComponents = impl.stronglyConnectedComponentsKeyed();

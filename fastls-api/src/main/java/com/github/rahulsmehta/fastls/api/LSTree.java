@@ -53,7 +53,7 @@ public class LSTree {
     @VisibleForTesting
     Map<Integer, Set<Integer>> getKeyedComponents() {
         Map<Integer, Set<Integer>> keyedComponents = Maps.newHashMap();
-        for (int i=0; i < uf.size(); i++) {
+        for (int i = 0; i < uf.size(); i++) {
             int component = uf.find(i);
             Set<Integer> updatedComponent = keyedComponents.getOrDefault(component, Sets.newHashSet());
             updatedComponent.add(i);
@@ -87,7 +87,7 @@ public class LSTree {
         if (u.getParent() == null) {
             return depth;
         }
-        return depthRecursive(u.getParent(), depth+1);
+        return depthRecursive(u.getParent(), depth + 1);
     }
 
     /*
@@ -133,11 +133,11 @@ public class LSTree {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
 
-        this.printNodeMap();
+//        this.printNodeMap();
 
         List<TreeNode> cycle = findCycle(u_node, v_node);
         List<Integer> values = cycle.stream().map(TreeNode::getValue).collect(Collectors.toList());
-        LOG.warn("found cycle: {}", values);
+        LOG.warn("contracting cycle: {}", values);
         if (cycle.size() < 2) {
             LOG.warn("current edge: {}", e);
             LOG.warn("cycle: {}, {}", cycle.get(0).getValue(), cycle.get(0).getParent().getValue());
@@ -149,7 +149,7 @@ public class LSTree {
         TreeNode pivot = cycle.get(0);
         Set<TreeNode> newChildren = Sets.newHashSet();
         newChildren.addAll(pivot.getChildren());
-        for (int i=1; i < cycle.size(); i++) {
+        for (int i = 1; i < cycle.size(); i++) {
             TreeNode toContract = cycle.get(i);
             // Remove from nodeMap and store children
             this.nodeMap.remove(toContract.getValue());
@@ -159,8 +159,8 @@ public class LSTree {
         }
         newChildren = Sets.difference(newChildren, ImmutableSet.of(cycle));
         newChildren.stream().filter(node -> node != pivot).forEach(child -> child.setParent(pivot));
-        LOG.warn("pivot : {}", pivot.getValue());
-        LOG.warn("pivot parent: {}", pivot.getParent().getValue());
+//        LOG.warn("pivot : {}", pivot.getValue());
+//        LOG.warn("pivot parent: {}", pivot.getParent().getValue());
         pivot.setChildren(newChildren);
         if (cycle.contains(pivot.getParent())) {
             this.root.addChild(pivot);
@@ -171,8 +171,8 @@ public class LSTree {
         nodeMap.remove(oldValue);
 
         int newValue = uf.find(oldValue);
-        LOG.warn("relabeled to: {}", pivot.getValue());
-        LOG.warn("new pivot parent: {}", pivot.getParent().getValue());
+//        LOG.warn("relabeled to: {}", pivot.getValue());
+//        LOG.warn("new pivot parent: {}", pivot.getParent().getValue());
         pivot.setValue(newValue);
         nodeMap.put(newValue, pivot);
 
@@ -211,10 +211,10 @@ public class LSTree {
         TreeNode v_node = this.getNode(e.j);
 
         // Remove (v.parent, v) from T
-       TreeNode v_parent = v_node.getParent();
-       v_parent.removeChild(v_node);
+        TreeNode v_parent = v_node.getParent();
+        v_parent.removeChild(v_node);
 
-       // Add e=(u,v) to T
+        // Add e=(u,v) to T
         u_node.addChild(v_node);
         v_node.setParent(u_node);
 
@@ -230,7 +230,7 @@ public class LSTree {
     }
 
     private boolean isSelfLoop(Edge e) {
-        return e.i == e.j;
+        return e.i.equals(e.j);
     }
 
     private void printNodeMap() {
@@ -242,13 +242,16 @@ public class LSTree {
 
     public Optional<Edge> processEdge(Edge graphEdge) {
         Edge treeEdge = translateEdge(graphEdge);
-        Object[] args = { graphEdge.i, graphEdge.j, treeEdge.i, treeEdge.j };
+        Object[] args = {graphEdge.i, graphEdge.j, treeEdge.i, treeEdge.j};
         LOG.warn("{},{} -> {},{}", args);
 
+        Object[] args2 = { treeEdge.i, treeEdge.j, isSelfLoop(treeEdge) };
+
+        LOG.warn("{},{} is loop?: {}", args2);
         if (isInit(treeEdge) && !isSelfLoop(treeEdge)) {
             LOG.warn("Initial case");
             processInit(treeEdge);
-            LOG.warn("{}", nodeMap.get(treeEdge.j).getParent().getValue());
+//            LOG.warn("{}", nodeMap.get(treeEdge.j).getParent().getValue());
             if (isBackward(treeEdge) && !isSelfLoop(treeEdge)) {
                 LOG.warn("Backward");
                 return processBackward(treeEdge);

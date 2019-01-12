@@ -11,7 +11,7 @@ repositories {
 }
 
 test {
-//    testLogging.showStandardStreams = true
+    testLogging.showStandardStreams = true
 }
 
 test.outputs.upToDateWhen {false}

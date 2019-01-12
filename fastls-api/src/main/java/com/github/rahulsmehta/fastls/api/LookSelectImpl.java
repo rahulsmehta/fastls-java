@@ -42,6 +42,11 @@ public class LookSelectImpl {
 
         this.currentStream = new EdgeStream(newEdges);
         this.currentPhase++;
+        if (nextStreamSize == 0) {
+            LOG.warn("Stream empty");
+        } else if (this.tree.isComplete()) {
+            LOG.warn("Tree did not get modified");
+        }
         return nextStreamSize == 0 || this.tree.isComplete();
     }
 
