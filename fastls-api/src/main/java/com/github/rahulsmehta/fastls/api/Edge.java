@@ -1,9 +1,9 @@
 package com.github.rahulsmehta.fastls.api;
 
-public class Edge {
-    public final Integer i, j;
+class Edge {
+    final Integer i, j;
 
-    public Edge(int i, int j) {
+    Edge(int i, int j) {
         this.i = i;
         this.j = j;
     }

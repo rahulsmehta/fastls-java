@@ -12,8 +12,6 @@ import java.util.stream.Collectors;
 public class LSTree {
 
     private final Logger LOG = LoggerFactory.getLogger(LSTree.class);
-
-
     private final Integer numNodes;
 
     private UnionFind<Integer> uf;
@@ -32,16 +30,62 @@ public class LSTree {
         List<TreeNode> children = nodes.stream()
                 .map(value -> new TreeNode(value, this.root))
                 .collect(Collectors.toList());
-
         this.root.addChildren(children);
-
         for (TreeNode child : children) {
             this.nodeMap.put(child.getValue(), child);
         }
-
         this.modifiedThisPhase = false;
     }
 
+    /**
+     * Processes an edge according to the LS algorithm.
+     *
+     * @param graphEdge An edge in <code>G</code> corresponding to <code>(i,j)</code>.
+     * @return Returns an optional <code>Edge</code>, depending on whether or not the previous update
+     * resulted in a new edge being added to the next streaming phase.
+     */
+    public Optional<Edge> processEdge(Edge graphEdge) {
+        Edge treeEdge = translateEdge(graphEdge);
+
+        if (isInit(treeEdge) && !isSelfLoop(treeEdge)) {
+            processInit(treeEdge);
+            if (isBackward(treeEdge) && !isSelfLoop(treeEdge)) {
+                return processBackward(treeEdge);
+            } else {
+                return Optional.empty();
+            }
+        } else if (isSelfLoop(treeEdge) || isForward(treeEdge)) {
+            return Optional.empty();
+        } else if (isBackward(treeEdge)) {
+            return processBackward(treeEdge);
+        } else if (isCrossForward(treeEdge)) {
+            return Optional.of(treeEdge);
+        } else if (isCrossNonForward(treeEdge)) {
+            return processCrossNonForward(treeEdge);
+        } else {
+            throw new IllegalStateException("Should never reach here");
+        }
+    }
+
+    /**
+     * Computes the strongly-connected components of <code>G</code>.
+     *
+     * @return Returns a list of sets, each containing the values of each node in the resepctive connected
+     * components.
+     */
+    List<Set<Integer>> stronglyConnectedComponents() {
+        return new ArrayList<>(getKeyedComponents().values());
+    }
+
+    /**
+     * Returns the <code>TreeNode</code> associated with a particular node value.
+     *
+     * @param value The value of the node to return.
+     * @return The value of the node, it exists
+     * @throws throws an <code>IllegalStateException</code> if a caller attempts to
+     *                access a non-existent node (since nodes are never explicitly deleted during execution
+     *                this is an indicator of corrupted state).
+     */
     private TreeNode getNode(int value) {
         if (this.nodeMap.containsKey(value)) {
             return this.nodeMap.get(value);
@@ -50,6 +94,14 @@ public class LSTree {
         }
     }
 
+    /**
+     * Translates a graph edge <code>(i,j)</code> into a tree edge <code>(u,v)</code> using the union-find
+     * structure.
+     *
+     * @param e <code>e=(i,j)</code>, a graph edge.
+     * @return <code>e' = (u,v),</code> which is an edge that corresponds to the (possibly contracted) nodes
+     * in the LS tree.
+     */
     private Edge translateEdge(Edge e) {
         return new Edge(this.uf.find(e.i), this.uf.find(e.j));
     }
@@ -66,22 +118,29 @@ public class LSTree {
         return keyedComponents;
     }
 
-    List<Set<Integer>> stronglyConnectedComponents() {
-        return new ArrayList<>(getKeyedComponents().values());
-    }
-
+    /**
+     * Marks the streaming passs as having begun, so T can detect mutations and report the flag
+     * to the caller.
+     */
     void startPhase() {
         this.modifiedThisPhase = false;
     }
 
+    /**
+     * Checks if the internal tree T changed at all in the past streaming phase - if it did not, then the
+     * algorithm has terminated.
+     *
+     * @return whether or not this is the last phase
+     */
     boolean isComplete() {
         return !this.modifiedThisPhase;
     }
 
-    // ===============================================================
-
-    /*
-    Returns the distance from u to the root
+    /***
+     * Returns the distance of the node <code>u</code> from the root of the tree.
+     * The root is considered to be at depth 0.
+     * @param   u   the node to calculate the depth.
+     * @return the distance from the root to u; this will always be non-negative.
      */
     private int depth(TreeNode u) {
         return depthRecursive(u, 0);
@@ -94,8 +153,13 @@ public class LSTree {
         return depthRecursive(u.getParent(), depth + 1);
     }
 
-    /*
-    Returns if u is an ancestor of v (i.e. v is a descendant of u)
+    /**
+     * Computes if <code>u</code> is an ancestor of <code>v</code>.
+     *
+     * @param u the source node
+     * @param v the target node
+     * @return a boolean indicating whether or not <code>v</code> is a descendent
+     * of <code>u</code>.
      */
     private boolean isAncestor(TreeNode u, TreeNode v) {
         if (v == null || v.getParent() == null) {
@@ -107,13 +171,25 @@ public class LSTree {
         }
     }
 
-    // ===============================================================
-
+    /**
+     * Checks if an edge <code>e=(ukv)</code>, given the current state of the tree <code>T</code>,
+     * satisfies the "initial" condition of the LS algorithm, namely that the <code>root</code>
+     * is <code>v</code>'s parent.
+     *
+     * @param e an edge <code>e=(u,v)</code> in the graph <code>G</code>.
+     * @return whether or not <code>e</code> satisfies the condition that <code>root</code> is
+     * the parent of <code>v</code>.
+     */
     private boolean isInit(Edge e) {
         TreeNode v_node = this.getNode(e.j);
         return v_node.getParent().equals(this.root);
     }
 
+    /**
+     * Updates the internal state of the LS tree T according to the update rule for the initial state.
+     *
+     * @param e the current edge to update.
+     */
     private void processInit(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
@@ -127,27 +203,36 @@ public class LSTree {
         this.modifiedThisPhase = true;
     }
 
+    /**
+     * Checks if an edge <code>e=(u,v)</code>, given the current state of the tree <code>T</code>,
+     * satisfies the "backward" edge condition, namely that <code>v</code> is an ancestor of <code>u</code>.
+     *
+     * @param e an edge <code>e=(u,v)</code> in the graph <code>G</code>.
+     * @return whether or not <code>e</code> satisfies the condition that <code>v</code> is an ancestor
+     * of <code>u</code>.
+     */
     private boolean isBackward(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
         return isAncestor(v_node, u_node);
     }
 
+    /**
+     * Updates the internal state of the LS tree T according to the update rule for the back edge state.
+     *
+     * @param e the current edge to update.
+     */
     private Optional<Edge> processBackward(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
 
 
         List<TreeNode> cycle = findCycle(u_node, v_node);
-        List<Integer> values = cycle.stream().map(TreeNode::getValue).collect(Collectors.toList());
         if (cycle.size() < 2) {
-//            LOG.warn("current edge: {}", e);
-//            LOG.warn("cycle: {}, {}", cycle.get(0).getValue(), cycle.get(0).getParent().getValue());
             throw new IllegalStateException("Should have at least 2 vertices");
         }
 
-        // Contract nodes along cycle
-
+        // Select a pivot node and contract the cycle around it
         TreeNode pivot = cycle.get(0);
         Set<TreeNode> newChildren = Sets.newHashSet();
         newChildren.addAll(pivot.getChildren());
@@ -161,8 +246,6 @@ public class LSTree {
         }
         newChildren = Sets.difference(newChildren, ImmutableSet.of(cycle));
         newChildren.stream().filter(node -> node != pivot).forEach(child -> child.setParent(pivot));
-//        LOG.warn("pivot : {}", pivot.getValue());
-//        LOG.warn("pivot parent: {}", pivot.getParent().getValue());
         pivot.setChildren(newChildren);
         if (cycle.contains(pivot.getParent())) {
             this.root.addChild(pivot);
@@ -173,8 +256,6 @@ public class LSTree {
         nodeMap.remove(oldValue);
 
         int newValue = uf.find(oldValue);
-//        LOG.warn("relabeled to: {}", pivot.getValue());
-//        LOG.warn("new pivot parent: {}", pivot.getParent().getValue());
         pivot.setValue(newValue);
         nodeMap.put(newValue, pivot);
 
@@ -182,6 +263,13 @@ public class LSTree {
         return Optional.empty();
     }
 
+    /**
+     * Utility method that finds all nodes lying on a cycle between <code>u</code> and <code>v</code>.
+     *
+     * @param u the source vertex for the cycle-forming edge
+     * @param v the target vertex for the cytcle-forming edge
+     * @return a list of all <code>TreeNode</code>s that are on the cycle.
+     */
     private List<TreeNode> findCycle(TreeNode u, TreeNode v) {
         return findCycleRecursive(u, v, Lists.newLinkedList(ImmutableList.of(v)));
     }
@@ -194,6 +282,13 @@ public class LSTree {
         return findCycleRecursive(u.getParent(), v, currentCycle);
     }
 
+    /**
+     * Checks if an edge <code>e=(u,v)</code>, given the current state of the tree <code>T</code>,
+     * satisfies the "cross-forward" edge condition, namely that <code>h(u) >= h(v)</code>.
+     *
+     * @param e an edge <code>e=(u,v)</code> in the graph <code>G</code>.
+     * @return whether or not <code>e</code> is a cross-forward edge.
+     */
     private boolean isCrossForward(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
@@ -201,6 +296,13 @@ public class LSTree {
                 depth(u_node) - 1 <= depth(v_node);
     }
 
+    /**
+     * Checks if an edge <code>e=(u,v)</code>, given the current state of the tree <code>T</code>,
+     * satisfies the "cross-non-forward" edge condition, namely that <code>h(u) < h(v)</code>.
+     *
+     * @param e an edge <code>e=(u,v)</code> in the graph <code>G</code>.
+     * @return whether or not <code>e</code> is a cross-non-forward edge.
+     */
     private boolean isCrossNonForward(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
@@ -208,6 +310,15 @@ public class LSTree {
                 depth(u_node) > depth(v_node) - 1;
     }
 
+    /**
+     * Updates the internal state of the tree for a cross non-forward edge. This "depeens" the tree by discarding
+     * the existing forward tree edge and re-rooting the sub-tree so that the cross-non-forward edge is now
+     * contaiend in T.
+     *
+     * @param e the current edge to update.
+     * @return an optional of type <code>Edge</code>, which indicates if there is another edge to be added
+     * to the next stream.
+     */
     private Optional<Edge> processCrossNonForward(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
@@ -225,16 +336,34 @@ public class LSTree {
         return Optional.of(new Edge(v_parent.getValue(), v_node.getValue()));
     }
 
+
+    /**
+     * Checks if an edge <code>e=(u,v)</code>, given the current state of the tree <code>T</code>,
+     * satisfies the "forward" edge condition, namely that <code>u</code> is an ancestor of <code>v</code>.
+     *
+     * @param e an edge <code>e=(u,v)</code> in the graph <code>G</code>.
+     * @return whether or not <code>e</code> satisfies the condition that <code>u</code> is an ancestor
+     * of <code>v</code>.
+     */
     private boolean isForward(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
         return isAncestor(u_node, v_node);
     }
 
+    /**
+     * Checks if an edge <code>e=(u,v)</code> is a self-loop, i.e. that <code>u = v</code>.
+     *
+     * @param e an edge <code>e=(u,v)</code> in the graph <code>G</code>.
+     * @return whether or not <code>e</code> is a self-loop.
+     */
     private boolean isSelfLoop(Edge e) {
         return e.i.equals(e.j);
     }
 
+    /*
+    Testing & debugging utilities
+     */
     private void printNodeMap() {
         nodeMap.entrySet().stream()
                 .filter(entry -> entry.getKey() != -1)
@@ -251,7 +380,7 @@ public class LSTree {
             leafEdges.put(node.getValue(), nodePath);
         }
 
-       return leafEdges.values().stream()
+        return leafEdges.values().stream()
                 .flatMap(path -> path.stream())
                 .distinct().collect(Collectors.toList());
 
@@ -287,44 +416,11 @@ public class LSTree {
 
             Integer maxHeight = -1;
             for (TreeNode child : current.getChildren()) {
-                Integer subtreeHeight = height(child, h+1);
+                Integer subtreeHeight = height(child, h + 1);
                 maxHeight = subtreeHeight > maxHeight ? subtreeHeight : maxHeight;
             }
             return maxHeight;
         }
     }
 
-
-    public Optional<Edge> processEdge(Edge graphEdge) {
-        Edge treeEdge = translateEdge(graphEdge);
-//        Object[] args = {graphEdge.i, graphEdge.j, treeEdge.i, treeEdge.j};
-//        LOG.warn("{},{} -> {},{}", args);
-//        LOG.warn("(n,h_T): {},{}", this.numNodes, this.height());
-
-        if (isInit(treeEdge) && !isSelfLoop(treeEdge)) {
-//            LOG.warn("Initial case");
-            processInit(treeEdge);
-//            LOG.warn("{}", nodeMap.get(treeEdge.j).getParent().getValue());
-            if (isBackward(treeEdge) && !isSelfLoop(treeEdge)) {
-//                LOG.warn("Backward");
-                return processBackward(treeEdge);
-            } else {
-                return Optional.empty();
-            }
-        } else if (isSelfLoop(treeEdge) || isForward(treeEdge)) {
-//            LOG.warn("Self-loop or forward");
-            return Optional.empty();
-        } else if (isBackward(treeEdge)) {
-//            LOG.warn("Backward");
-            return processBackward(treeEdge);
-        } else if (isCrossForward(treeEdge)) {
-//            LOG.warn("Cross-forward");
-            return Optional.of(treeEdge);
-        } else if (isCrossNonForward(treeEdge)) {
-//            LOG.warn("Cross-non-forward");
-            return processCrossNonForward(treeEdge);
-        } else {
-            throw new IllegalStateException("Should never reach here");
-        }
-    }
 }
