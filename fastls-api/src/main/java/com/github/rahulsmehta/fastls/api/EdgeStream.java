@@ -75,7 +75,7 @@ public class EdgeStream implements Iterable<Edge> {
                 new RuntimeException("Attempted to get reader iterator without it present"));
 
         return new Iterator<Edge>() {
-            private boolean isFlushed = false;
+            private boolean isFlushed = true;
             private String next;
 
             @Override

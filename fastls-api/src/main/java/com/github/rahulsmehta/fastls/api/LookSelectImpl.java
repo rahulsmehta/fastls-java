@@ -4,13 +4,17 @@ import org.jheaps.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.*;
 import java.util.*;
 
 public class LookSelectImpl {
 
     private final Logger LOG = LoggerFactory.getLogger(LookSelectImpl.class);
-    private final StreamingGraph graph;
+    private final int BUFFER_SIZE = 8 * 1024;
+    private final String BASE_NAME = UUID.randomUUID().toString();
+    private final String FILE_PATTERN = "./build/resources/fastls.%s.%d";
 
+    private StreamingGraph graph;
     private EdgeStream currentStream;
     private LSTree tree;
     private int currentPhase;
@@ -25,36 +29,45 @@ public class LookSelectImpl {
     }
 
     private boolean streamingPhase() {
-        LOG.warn("Starting phase {}", currentPhase);
         this.tree.startPhase();
-        ArrayList<Edge> newEdges = new ArrayList<>();
         int nextStreamSize = 0;
-        int currentStreamSize = 0;
 
-        for (Edge edge : this.currentStream) {
-            currentStreamSize++;
-            Optional<Edge> maybeEdge = this.tree.processEdge(edge);
-            if (maybeEdge.isPresent()) {
-                newEdges.add(edge);
-                nextStreamSize++;
+        BufferedWriter writer;
+        FileWriter fileWriter;
+        String OUT_FILE_NAME = String.format(FILE_PATTERN, BASE_NAME, this.currentPhase);
+
+        try {
+            File file = new File(OUT_FILE_NAME);
+            fileWriter = new FileWriter(file);
+            writer = new BufferedWriter(fileWriter);
+
+            String toWrite = String.format("%d\n", this.graph.getNodes().size());
+            writer.write(toWrite);
+
+            for (Edge edge : this.currentStream) {
+                Optional<Edge> maybeEdge = this.tree.processEdge(edge);
+                if (maybeEdge.isPresent()) {
+                    toWrite = maybeEdge.get().toString() + "\n";
+                    writer.write(toWrite);
+                    nextStreamSize++;
+                }
             }
+            writer.close();
+            fileWriter.close();
+
+            BufferedReader nextStream = new BufferedReader(
+                    new FileReader(file),
+                    BUFFER_SIZE
+            );
+
+            this.currentStream = new EdgeStream(nextStream);
+            this.currentPhase++;
+
+            return nextStreamSize == 0 || this.tree.isComplete();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
-        LOG.warn("{} edges in current phase", currentStreamSize);
-
-//        LOG.warn("{} edges in next phase", newEdges.size());
-//        if (newEdges.size() < 10) {
-//            LOG.warn("edges: {}", newEdges);
-//        }
-
-        this.currentStream = new EdgeStream(newEdges);
-        this.currentPhase++;
-        if (nextStreamSize == 0) {
-            LOG.warn("Stream empty");
-        } else if (this.tree.isComplete()) {
-            LOG.warn("Tree did not get modified");
-        }
-        return nextStreamSize == 0 || this.tree.isComplete();
     }
 
     @VisibleForTesting

@@ -140,7 +140,6 @@ public class LSTree {
 
         List<TreeNode> cycle = findCycle(u_node, v_node);
         List<Integer> values = cycle.stream().map(TreeNode::getValue).collect(Collectors.toList());
-        LOG.warn("contracting cycle: {}", values);
         if (cycle.size() < 2) {
 //            LOG.warn("current edge: {}", e);
 //            LOG.warn("cycle: {}, {}", cycle.get(0).getValue(), cycle.get(0).getParent().getValue());
@@ -180,7 +179,6 @@ public class LSTree {
         nodeMap.put(newValue, pivot);
 
         this.modifiedThisPhase = true;
-        LOG.warn("Tree Edges (after): {}", this.treeEdges());
         return Optional.empty();
     }
 
