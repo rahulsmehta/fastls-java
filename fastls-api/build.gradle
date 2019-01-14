@@ -24,5 +24,6 @@ dependencies {
     compile "org.slf4j:slf4j-simple:1.6.1"
 
     testCompile "junit:junit:$junitVersion"
+    testCompile "com.carrotsearch:junit-benchmarks:0.7.2"
 //    testCompile "org.slf4j:slf4j-simple:1.6.1"
 }

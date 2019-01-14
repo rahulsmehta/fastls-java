@@ -50,14 +50,14 @@ public class LSTree {
         if (isInit(treeEdge) && !isSelfLoop(treeEdge)) {
             processInit(treeEdge);
             if (isBackward(treeEdge) && !isSelfLoop(treeEdge)) {
-                return processBackward(treeEdge);
-            } else {
-                return Optional.empty();
+                processBackward(treeEdge);
             }
+            return Optional.empty();
         } else if (isSelfLoop(treeEdge) || isForward(treeEdge)) {
             return Optional.empty();
         } else if (isBackward(treeEdge)) {
-            return processBackward(treeEdge);
+            processBackward(treeEdge);
+            return Optional.empty();
         } else if (isCrossForward(treeEdge)) {
             return Optional.of(treeEdge);
         } else if (isCrossNonForward(treeEdge)) {
@@ -222,7 +222,7 @@ public class LSTree {
      *
      * @param e the current edge to update.
      */
-    private Optional<Edge> processBackward(Edge e) {
+    private void processBackward(Edge e) {
         TreeNode u_node = this.getNode(e.i);
         TreeNode v_node = this.getNode(e.j);
 
@@ -260,7 +260,6 @@ public class LSTree {
         nodeMap.put(newValue, pivot);
 
         this.modifiedThisPhase = true;
-        return Optional.empty();
     }
 
     /**
@@ -409,14 +408,9 @@ public class LSTree {
         if (current.getChildren().size() == 0) {
             return h;
         } else {
-//            return current.getChildren().stream()
-//                    .map(child -> height(child, h + 1))
-//                    .max(Integer::compareTo)
-//                    .orElseThrow(() -> new IllegalStateException("Malformed LS tree"));
-
-            Integer maxHeight = -1;
+            int maxHeight = -1;
             for (TreeNode child : current.getChildren()) {
-                Integer subtreeHeight = height(child, h + 1);
+                int subtreeHeight = height(child, h + 1);
                 maxHeight = subtreeHeight > maxHeight ? subtreeHeight : maxHeight;
             }
             return maxHeight;

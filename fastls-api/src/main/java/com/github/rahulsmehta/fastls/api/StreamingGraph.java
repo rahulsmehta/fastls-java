@@ -4,6 +4,8 @@ import org.jheaps.annotations.VisibleForTesting;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class StreamingGraph {
 
@@ -13,6 +15,13 @@ public class StreamingGraph {
 
     public StreamingGraph(Set<Integer> nodes, EdgeStream edgeStream) {
         this.nodes = nodes;
+        this.edgeStream = edgeStream;
+    }
+
+    public StreamingGraph(EdgeStream edgeStream) {
+        this.nodes = IntStream.range(0, edgeStream.getNumNodes())
+                .boxed()
+                .collect(Collectors.toSet());
         this.edgeStream = edgeStream;
     }
 
